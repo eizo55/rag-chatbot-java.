@@ -1,0 +1,11 @@
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/Bm25Retriever.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/Chunk.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/Chunker.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/ClaudeClient.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/DocumentLoader.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/LlmClient.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/Main.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/OllamaClient.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/RagChatbot.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/Retriever.java
+/Users/aziz/Documents/promos/rag-chatbot/src/main/java/dev/faham/rag/Tokenizer.java

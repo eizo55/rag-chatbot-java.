@@ -1,0 +1,15 @@
+dev/faham/rag/Chunker.class
+dev/faham/rag/ClaudeClient.class
+dev/faham/rag/Tokenizer.class
+dev/faham/rag/RagChatbot$Answer.class
+dev/faham/rag/DocumentLoader.class
+dev/faham/rag/Main.class
+dev/faham/rag/OllamaClient.class
+dev/faham/rag/Retriever.class
+dev/faham/rag/Main$Backend.class
+dev/faham/rag/Bm25Retriever.class
+dev/faham/rag/LlmClient$Message.class
+dev/faham/rag/Retriever$ScoredChunk.class
+dev/faham/rag/LlmClient.class
+dev/faham/rag/RagChatbot.class
+dev/faham/rag/Chunk.class
