@@ -1,77 +1,66 @@
-# RAG-Chatbot in Java
+# Frag die Akte – RAG-Chatbot im Browser
 
-Ein kleiner Retrieval-Augmented-Generation-Chatbot: Er zerlegt Textdokumente in Abschnitte, findet zu jeder Frage die passendsten Abschnitte (BM25) und lässt Claude **nur anhand dieser Quellen** antworten, mit Quellenangaben.
+Ein Retrieval-Augmented-Generation-Chatbot über kurze Texte zum Mietrecht. Die Seite zerlegt Dokumente in Abschnitte, findet zu einer Frage die passendsten per BM25 und zeigt sie mit markierten Suchwörtern. Ein Sprachmodell kann daraus eine Antwort mit nummerierten Quellenangaben formulieren.
 
-## Architektur
+Die Dokumentensuche läuft vollständig im Browser, ohne Server. Für Antworten stehen drei Modelle zur Wahl: Ollama (lokal und kostenlos), Claude oder OpenAI (jeweils mit eigenem API-Schlüssel).
 
-```
-docs/*.md|txt ──► DocumentLoader ──► Chunker ──► Bm25Retriever (Index im Speicher)
-                                                       │ top-k Abschnitte
-Frage ──────────────────────────────────────────► RagChatbot ──► ClaudeClient ──► Antwort + Quellen
-```
+Es gibt auch eine Java-Version des Projekts: [rag-chatbot-java](https://github.com/eizo55/rag-chatbot-java).
 
-| Klasse | Aufgabe |
+## Funktionen
+
+- **Dokumentensuche im Browser:** Chunking mit Überlappung, deutsche Normalisierung (Umlaute, Stoppwörter) und Teilwörter zusammengesetzter Wörter, sodass „Kaution“ auch „Mietkaution“ findet.
+- **Antworten mit Quellen:** Die besten vier Abschnitte gehen als nummerierte Quellen an das Modell. Zitate wie `[1]` in der Antwort verlinken auf den jeweiligen Abschnitt.
+- **Austauschbares Modell:** Ollama, Claude (Anthropic Messages API) oder OpenAI (Responses API). API-Schlüssel bleiben im Arbeitsspeicher des Tabs und werden nicht gespeichert.
+- **Eigene Dokumente:** `.txt`- und `.md`-Dateien lassen sich im Browser hinzufügen und werden nicht hochgeladen.
+- **Verständliche Fehlermeldungen:** zum Beispiel bei nicht erreichbarem Ollama, unbekanntem Modell oder ungültigem Schlüssel.
+- Bedienung per Tastatur mit sichtbarem Fokus, responsives Layout, helles und dunkles Design.
+
+## Technik
+
+- Reines HTML, CSS und JavaScript ohne Build-Schritt und ohne Abhängigkeiten
+- Eigene Implementierung von Okapi BM25 mit invertiertem Index im Speicher
+- Anbindung von Ollama (`/api/chat`), der Anthropic Messages API und der OpenAI Responses API über `fetch`
+- Der Prompt weist das Modell an, nur aus den Quellen zu antworten und deren Inhalt als Daten zu behandeln, nicht als Anweisungen
+- Unit-Tests mit dem eingebauten Node-Testwerkzeug (`assert`)
+
+Die Suchlogik ist an die Java-Version des Projekts (Maven, JUnit) angelehnt.
+
+## Aufbau
+
+| Datei | Inhalt |
 | --- | --- |
-| `Chunker` | Teilt Text in überlappende Abschnitte (Standard: 800 Zeichen, 120 Überlappung) |
-| `Tokenizer` | Kleinschreibung, Umlaute falten, deutsche/englische Stoppwörter entfernen |
-| `Bm25Retriever` | Okapi-BM25-Ranking über einen invertierten Index |
-| `RagChatbot` | Baut den Prompt mit nummerierten Quellen, hält kurzen Gesprächsverlauf |
-| `ClaudeClient` | Ruft die Anthropic Messages API mit `java.net.http` auf |
-| `LlmClient` / `Retriever` | Interfaces, damit Komponenten austauschbar und testbar sind |
+| `index.html`, `style.css` | Seite und Gestaltung |
+| `rag.js` | Tokenizer, Chunker, BM25, Hervorhebung, Prompt |
+| `app.js` | Oberfläche und Anbindung der Sprachmodelle |
+| `docs.js` | Drei Beispieltexte (Demo-Inhalte, keine Rechtsberatung) |
+| `tests.js` | Tests für `rag.js` |
 
 ## Starten
 
-Voraussetzungen: Java 21, Maven.
+Für die Suche genügt es, `index.html` im Browser zu öffnen.
+
+**Ollama (lokal):**
 
 ```bash
-mvn package
-export ANTHROPIC_API_KEY=sk-ant-...        # Schlüssel aus der Anthropic Console
-java -jar target/rag-chatbot-1.0.0.jar docs
+ollama pull llama3.2                      # Modell einmalig laden
+OLLAMA_ORIGINS="https://eizo55.github.io" ollama serve
 ```
 
-Optional: `ANTHROPIC_MODEL` setzt das Modell (Standard: `claude-sonnet-5-5`).
+Der Browser darf Ollama nur ansprechen, wenn die Seite freigegeben ist. Die Herkunft in `OLLAMA_ORIGINS` muss zur Adresse der Seite passen. Wird `index.html` direkt aus dem Dateisystem geöffnet, steht dort `"*"`. Die Seite zeigt unter „Ollama“ die passende Zeile an.
 
-### Kostenlos mit lokalem Modell (Ollama)
-
-Ohne API-Key nutzt der Bot automatisch ein lokal laufendes [Ollama](https://ollama.com), falls vorhanden:
-
-```bash
-# 1. Ollama installieren (ollama.com) und starten (die App öffnen oder `ollama serve`)
-# 2. Modell einmalig laden (ca. 2 GB)
-ollama pull llama3.2
-# 3. Bot starten, ohne ANTHROPIC_API_KEY
-java -jar target/rag-chatbot-1.0.0.jar docs
-```
-
-Die Startmeldung zeigt, welches Modell aktiv ist. Einstellungen per Umgebungsvariable:
-
-| Variable | Bedeutung |
-| --- | --- |
-| `LLM_BACKEND` | `claude`, `ollama` oder `none` erzwingt ein Backend (sonst automatisch) |
-| `OLLAMA_MODEL` | Modellname, Standard `llama3.2` (z. B. `qwen2.5` oder `llama3.1:8b` für bessere deutsche Antworten, braucht mehr RAM) |
-| `OLLAMA_URL` | Standard `http://localhost:11434` |
-
-Reihenfolge der automatischen Wahl: API-Key gesetzt → Claude; sonst Ollama läuft → Ollama; sonst nur Retrieval (zeigt die gefundenen Abschnitte).
-
-Beispielfragen zu den mitgelieferten Dokumenten:
-
-- Wie hoch darf eine Mietkaution sein?
-- Bis wann muss die Betriebskostenabrechnung beim Mieter sein?
-- Was macht eine Hausverwaltung?
-
-Eigene Dokumente: einfach `.md`/`.txt`-Dateien in einen Ordner legen und diesen als Argument übergeben. Die Beispieltexte in `docs/` sind kurze Demo-Inhalte und keine Rechtsberatung.
+**Claude oder OpenAI:** Modus wählen, API-Schlüssel eintragen, Frage stellen. Die Anfragen gehen direkt vom Browser an den jeweiligen Anbieter.
 
 ## Tests
 
 ```bash
-mvn test
+node tests.js
 ```
 
-Die Tests laufen ohne Netzwerk (der LLM-Aufruf wird durch ein Fake ersetzt).
+Geprüft werden Tokenizer, Chunking, BM25-Ranking, Hervorhebung und Prompt-Aufbau.
 
-## Ideen zum Ausbauen
+## Grenzen
 
-- **Embeddings statt BM25:** neue `Retriever`-Implementierung mit Vektorsuche (z. B. pgvector), ggf. hybrid mit BM25.
-- **PDF-Unterstützung** im `DocumentLoader` (Apache PDFBox).
-- **Streaming** der Antwort und eine kleine Weboberfläche (Spring Boot).
-- **Evaluation:** Testfragen mit erwarteten Quellen, um Chunk-Größe und top-k zu vergleichen.
+- Frage und Antwort ohne Gesprächsverlauf
+- Direkte Browser-Aufrufe der Anbieter-APIs funktionieren nur, solange der Anbieter sie zulässt (CORS). Für den produktiven Einsatz gehören API-Schlüssel auf einen Server.
+- Die Beispieltexte sind kurze Demo-Inhalte und keine Rechtsberatung
+- Kleine lokale Modelle antworten auf Deutsch weniger zuverlässig als große und halten die Zitierregeln nicht immer ein; die angezeigten Quellen sind davon unabhängig
